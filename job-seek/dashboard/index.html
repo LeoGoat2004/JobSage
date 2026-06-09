@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobSage — 就业咨询工作台</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #0f766e;
+      --primary-light: #14b8a6;
+      --primary-bg: #f0fdfa;
+      --accent: #f59e0b;
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --sidebar-bg: #0f172a;
+      --sidebar-text: #94a3b8;
+      --sidebar-hover: #1e293b;
+      --sidebar-active: #14b8a6;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --radius: 10px;
+      --font: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; }
+
+    /* ═══ Layout ═══ */
+    .layout { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ═══ Sidebar ═══ */
+    .sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--sidebar-bg);
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+      transition: margin-left .25s ease;
+    }
+    .sidebar.collapsed { margin-left: -240px; }
+
+    .sidebar-brand {
+      display: flex; align-items: center; gap: .6rem;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 900; font-size: .85rem;
+    }
+    .brand-text { font-weight: 700; font-size: 1.15rem; color: #fff; letter-spacing: -.01em; }
+
+    .sidebar-section {
+      padding: .8rem 1.2rem .3rem;
+      font-size: .65rem; font-weight: 700; color: #475569;
+      text-transform: uppercase; letter-spacing: .1em;
+    }
+    .sidebar-nav { list-style: none; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .55rem 1.2rem;
+      color: var(--sidebar-text); text-decoration: none;
+      font-size: .84rem; transition: all .15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-nav a:hover { background: var(--sidebar-hover); color: #e2e8f0; }
+    .sidebar-nav a.active { color: #fff; border-left-color: var(--sidebar-active); background: var(--sidebar-hover); }
+    .sidebar-nav a i { width: 18px; text-align: center; font-size: .85rem; }
+    .sidebar-nav .badge-method {
+      margin-left: auto; font-size: .58rem; padding: 1px 6px;
+      border-radius: 3px; font-weight: 700;
+    }
+    .badge-method.api { background: #065f46; color: #6ee7b7; }
+    .badge-method.html { background: #713f12; color: #fde68a; }
+    .badge-method.crawl4ai { background: #581c87; color: #d8b4fe; }
+
+    /* ═══ Main ═══ */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ═══ Header ═══ */
+    .header {
+      height: 56px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.5rem;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: .75rem; }
+    .header-right { display: flex; align-items: center; gap: .5rem; }
+    .btn-icon {
+      width: 36px; height: 36px; border: none; background: none;
+      border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary); font-size: 1.1rem; transition: all .15s;
+    }
+    .btn-icon:hover { background: var(--bg); color: var(--text); }
+
+    /* ═══ Content ═══ */
+    .content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+
+    /* ═══ Search ═══ */
+    .search-box {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 1.25rem 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.25rem;
+    }
+    .search-row { display: flex; gap: .6rem; }
+    .search-row input {
+      flex: 1; height: 44px; border: 2px solid var(--border); border-radius: 8px;
+      padding: 0 1rem; font-size: .9rem; font-family: var(--font);
+      transition: border-color .2s;
+    }
+    .search-row input:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(20,184,166,.1); }
+    .search-row select {
+      height: 44px; border: 2px solid var(--border); border-radius: 8px;
+      padding: 0 .8rem; font-size: .84rem; color: var(--text-secondary);
+      background: var(--surface); min-width: 110px; font-family: var(--font);
+    }
+    .search-row select:focus { outline: none; border-color: var(--primary-light); }
+    .btn-search {
+      height: 44px; padding: 0 1.8rem;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff; border: none; border-radius: 8px;
+      font-weight: 600; font-size: .9rem; cursor: pointer;
+      font-family: var(--font); white-space: nowrap;
+      transition: transform .1s, box-shadow .2s;
+    }
+    .btn-search:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,118,110,.25); }
+    .btn-search:active { transform: translateY(0); }
+    .btn-search:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .source-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+    .chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .25rem .65rem; border-radius: 16px;
+      font-size: .74rem; font-weight: 500; cursor: pointer;
+      border: 1.5px solid var(--border); background: var(--surface);
+      color: var(--text-secondary); user-select: none; transition: all .15s;
+    }
+    .chip.selected { border-color: var(--primary-light); background: var(--primary-bg); color: var(--primary); }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .chip-dot.api { background: #10b981; }
+    .chip-dot.html { background: #f59e0b; }
+    .chip-dot.crawl4ai { background: #8b5cf6; }
+
+    /* ═══ Stats ═══ */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin-bottom: 1.25rem; }
+    .stat-card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 1rem 1.2rem; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: .8rem;
+    }
+    .stat-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+    .stat-icon.teal { background: #f0fdfa; color: var(--primary); }
+    .stat-icon.amber { background: #fffbeb; color: #d97706; }
+    .stat-icon.violet { background: #f5f3ff; color: #7c3aed; }
+    .stat-icon.rose { background: #fff1f2; color: #e11d48; }
+    .stat-value { font-size: 1.5rem; font-weight: 900; line-height: 1; color: var(--text); font-family: var(--mono); }
+    .stat-label { font-size: .72rem; color: var(--text-muted); margin-top: .15rem; }
+
+    /* ═══ Results ═══ */
+    .results-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .results-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .8rem 1.2rem; border-bottom: 1px solid var(--border-light);
+    }
+    .results-head h3 { font-size: .9rem; font-weight: 700; }
+    .results-count { font-size: .75rem; color: var(--text-muted); font-family: var(--mono); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--bg); padding: .6rem .8rem; font-size: .7rem;
+      font-weight: 600; color: var(--text-secondary); text-transform: uppercase;
+      letter-spacing: .04em; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: .6rem .8rem; font-size: .82rem; color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-light); vertical-align: middle;
+    }
+    tr:hover td { background: var(--bg); }
+    .job-title { font-weight: 600; color: var(--text); }
+    .job-title a { color: var(--primary); text-decoration: none; }
+    .job-title a:hover { text-decoration: underline; }
+    .tag {
+      display: inline-block; padding: 1px 7px; border-radius: 4px;
+      font-size: .68rem; font-weight: 600;
+    }
+    .tag-campus { background: #dbeafe; color: #1d4ed8; }
+    .tag-social { background: #fce7f3; color: #be185d; }
+    .tag-intern { background: #d1fae5; color: #065f46; }
+    .source-tag { display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; color: var(--text-muted); }
+
+    /* ═══ Empty / Loading ═══ */
+    .empty { text-align: center; padding: 3rem 2rem; color: var(--text-muted); }
+    .empty i { font-size: 2.5rem; margin-bottom: .8rem; display: block; }
+    .empty p { font-size: .9rem; }
+
+    .loading { display: none; text-align: center; padding: 2.5rem; }
+    .loading.active { display: block; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin .7s linear infinite; margin: 0 auto .8rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--text-muted); font-size: .84rem; }
+    .loading-chips { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-top: .6rem; }
+    .loading-chip { padding: .2rem .5rem; border-radius: 4px; font-size: .7rem; background: var(--bg); color: var(--text-secondary); }
+    .loading-chip.done { background: #d1fae5; color: #065f46; }
+    .loading-chip.error { background: #fee2e2; color: #991b1b; }
+
+    /* ═══ Responsive ═══ */
+    @media (max-width: 992px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; z-index: 100; height: 100vh; }
+      .sidebar:not(.collapsed) + .main .content::before {
+        content: ''; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 99;
+      }
+    }
+    @media (max-width: 576px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .search-row { flex-wrap: wrap; }
+      .search-row input { width: 100%; }
+    }
+
+    /* ═══ Dark Mode ═══ */
+    body.dark {
+      --bg: #0f172a; --surface: #1e293b; --text: #f1f5f9;
+      --text-secondary: #cbd5e1; --text-muted: #64748b;
+      --border: #334155; --border-light: #1e293b;
+      --primary-bg: #042f2e;
+    }
+    body.dark .sidebar { background: #020617; }
+    body.dark .search-row input, body.dark .search-row select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+    body.dark .stat-icon.teal { background: #042f2e; }
+    body.dark .stat-icon.amber { background: #451a03; }
+    body.dark .stat-icon.violet { background: #2e1065; }
+    body.dark .stat-icon.rose { background: #4c0519; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">JS</div>
+      <span class="brand-text">JobSage</span>
+    </div>
+    <div class="sidebar-section">导航</div>
+    <ul class="sidebar-nav">
+      <li><a href="#" class="active" id="navDashboard"><i class="bi bi-speedometer2"></i>工作台</a></li>
+    </ul>
+    <div class="sidebar-section">公司直招</div>
+    <ul class="sidebar-nav" id="sidebarCompany"></ul>
+    <div class="sidebar-section">招聘平台</div>
+    <ul class="sidebar-nav" id="sidebarPlatform"></ul>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <button class="btn-icon" id="toggleSidebar" title="切换侧边栏"><i class="bi bi-list"></i></button>
+        <span style="font-size:.85rem;color:var(--text-secondary)">就业咨询工作台</span>
+      </div>
+      <div class="header-right">
+        <button class="btn-icon" id="themeToggle" title="切换主题"><i class="bi bi-moon-fill"></i></button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Search -->
+      <div class="search-box">
+        <div class="search-row">
+          <input type="text" id="searchInput" placeholder="搜索岗位关键词，如 Agent实习、前端开发、算法工程师..." autocomplete="off">
+          <button class="btn-search" id="searchBtn"><i class="bi bi-search" style="margin-right:4px"></i>搜索</button>
+        </div>
+        <div class="source-chips" id="sourceChips"></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat-card"><div class="stat-icon teal"><i class="bi bi-briefcase-fill"></i></div><div><div class="stat-value" id="statTotal">0</div><div class="stat-label">检索结果</div></div></div>
+        <div class="stat-card"><div class="stat-icon amber"><i class="bi bi-building"></i></div><div><div class="stat-value" id="statSources">0</div><div class="stat-label">数据源</div></div></div>
+        <div class="stat-card"><div class="stat-icon violet"><i class="bi bi-geo-alt-fill"></i></div><div><div class="stat-value" id="statCities">0</div><div class="stat-label">城市覆盖</div></div></div>
+        <div class="stat-card"><div class="stat-icon rose"><i class="bi bi-clock-fill"></i></div><div><div class="stat-value" id="statTime">-</div><div class="stat-label">耗时(秒)</div></div></div>
+      </div>
+
+      <!-- Results -->
+      <div class="results-card">
+        <div class="results-head">
+          <h3><i class="bi bi-list-ul" style="margin-right:6px"></i>职位列表</h3>
+          <span class="results-count" id="resultsCount"></span>
+        </div>
+        <div class="empty" id="emptyState"><i class="bi bi-search-heart"></i><p>输入关键词开始搜索岗位</p></div>
+        <div class="loading" id="loadingOverlay"><div class="spinner"></div><div class="loading-text">正在检索多个数据源...</div><div class="loading-chips" id="loadingChips"></div></div>
+        <div id="tableWrap" style="display:none">
+          <table>
+            <thead><tr><th>#</th><th>职位名称</th><th>公司</th><th>地点</th><th>类型</th><th>来源</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SOURCES = [
+  { key:'tencent',   name:'腾讯招聘',  method:'api',      cat:'company' },
+  { key:'meituan',   name:'美团招聘',  method:'api',      cat:'company' },
+  { key:'bilibili',  name:'哔哩哔哩',  method:'api',      cat:'company' },
+  { key:'jd',        name:'京东招聘',  method:'html',     cat:'company' },
+  { key:'bytedance', name:'字节跳动',  method:'crawl4ai', cat:'company' },
+  { key:'huawei',    name:'华为招聘',  method:'crawl4ai', cat:'company' },
+  { key:'minimax',   name:'MiniMax',   method:'crawl4ai', cat:'company' },
+  { key:'zhipu',     name:'智谱AI',    method:'crawl4ai', cat:'company' },
+  { key:'zhaopin',   name:'智联招聘',  method:'api',      cat:'platform' },
+];
+const ML = { api:'API', html:'HTML', crawl4ai:'Crawl' };
+
+let selected = new Set(SOURCES.filter(s => s.method !== 'crawl4ai').map(s => s.key));
+
+// ── Sidebar ──
+function initSidebar() {
+  const cList = document.getElementById('sidebarCompany');
+  const pList = document.getElementById('sidebarPlatform');
+  SOURCES.forEach(s => {
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="#" data-src="${s.key}"><i class="bi bi-building"></i>${s.name}<span class="badge-method ${s.method}">${ML[s.method]}</span></a>`;
+    li.querySelector('a').onclick = e => { e.preventDefault(); searchOne(s.key); };
+    (s.cat === 'company' ? cList : pList).appendChild(li);
+  });
+}
+
+// ── Chips ──
+function initChips() {
+  const box = document.getElementById('sourceChips');
+  SOURCES.forEach(s => {
+    const el = document.createElement('span');
+    el.className = 'chip' + (selected.has(s.key) ? ' selected' : '');
+    el.dataset.src = s.key;
+    el.innerHTML = `<span class="chip-dot ${s.method}"></span>${s.name}`;
+    el.onclick = () => { selected.has(s.key) ? selected.delete(s.key) : selected.add(s.key); el.classList.toggle('selected'); };
+    box.appendChild(el);
+  });
+}
+
+// ── Search ──
+async function doSearch() {
+  const kw = document.getElementById('searchInput').value.trim();
+  if (!kw) return;
+  const srcs = [...selected].join(',');
+  showLoading(srcs);
+  const t0 = performance.now();
+  try {
+    const r = await fetch(`/api/search?keyword=${encodeURIComponent(kw)}&sources=${srcs}`);
+    const d = await r.json();
+    const sec = ((performance.now() - t0) / 1000).toFixed(1);
+    markLoading(d);
+    render(d, sec);
+  } catch(e) {
+    document.getElementById('emptyState').style.display = '';
+    document.getElementById('emptyState').querySelector('p').textContent = '搜索出错: ' + e.message;
+  }
+  hideLoading();
+}
+
+async function searchOne(key) {
+  const kw = document.getElementById('searchInput').value.trim();
+  if (!kw) { document.getElementById('searchInput').focus(); return; }
+  const s = SOURCES.find(x => x.key === key);
+  showLoading(key);
+  const t0 = performance.now();
+  try {
+    const r = await fetch(`/api/search/${key}?keyword=${encodeURIComponent(kw)}`);
+    const d = await r.json();
+    const sec = ((performance.now() - t0) / 1000).toFixed(1);
+    markLoading({ sources_queried: [key], sources_empty: d.total === 0 ? [key] : [] });
+    render({ keyword: d.name, total: d.total, jobs: d.jobs, sources_queried: [key], sources_empty: d.total === 0 ? [key] : [] }, sec);
+  } catch(e) { console.error(e); }
+  hideLoading();
+}
+
+function showLoading(srcs) {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('tableWrap').style.display = 'none';
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('searchBtn').disabled = true;
+  const box = document.getElementById('loadingChips');
+  box.innerHTML = srcs.split(',').map(k => {
+    const s = SOURCES.find(x => x.key === k);
+    return `<span class="loading-chip" data-src="${k}">${s ? s.name : k}</span>`;
+  }).join('');
+}
+function markLoading(d) {
+  d.sources_queried.forEach(k => {
+    const el = document.querySelector(`.loading-chip[data-src="${k}"]`);
+    if (el) el.classList.add(d.sources_empty.includes(k) ? 'error' : 'done');
+  });
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+  document.getElementById('searchBtn').disabled = false;
+}
+
+// ── Render ──
+function render(data, sec) {
+  const jobs = data.jobs || [];
+  document.getElementById('statTotal').textContent = jobs.length;
+  document.getElementById('statSources').textContent = data.sources_queried.length;
+  document.getElementById('statCities').textContent = new Set(jobs.map(j => j.location).filter(Boolean)).size;
+  document.getElementById('statTime').textContent = sec;
+
+  if (!jobs.length) {
+    document.getElementById('emptyState').style.display = '';
+    document.getElementById('emptyState').querySelector('i').className = 'bi bi-emoji-neutral';
+    document.getElementById('emptyState').querySelector('p').textContent = '未找到匹配的岗位，试试其他关键词';
+    document.getElementById('tableWrap').style.display = 'none';
+    return;
+  }
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('tableWrap').style.display = '';
+  document.getElementById('resultsCount').textContent = `共 ${jobs.length} 条`;
+
+  document.getElementById('tbody').innerHTML = jobs.map((j, i) => {
+    const s = SOURCES.find(x => x.key === j.source);
+    const tc = /实习/.test(j.jobType) ? 'tag-intern' : /校招/.test(j.jobType) ? 'tag-campus' : 'tag-social';
+    const title = j.url ? `<a href="${j.url}" target="_blank" rel="noopener">${j.title}</a>` : j.title;
+    return `<tr>
+      <td style="color:var(--text-muted);font-family:var(--mono);font-size:.72rem">${i+1}</td>
+      <td class="job-title">${title}</td>
+      <td>${j.company}</td>
+      <td>${j.location||'-'}</td>
+      <td>${j.jobType?`<span class="tag ${tc}">${j.jobType}</span>`:'-'}</td>
+      <td><span class="source-tag"><span class="chip-dot ${s?s.method:'api'}"></span>${s?s.name:j.source}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Events ──
+document.getElementById('searchBtn').onclick = doSearch;
+document.getElementById('searchInput').onkeydown = e => { if (e.key === 'Enter') doSearch(); };
+document.getElementById('toggleSidebar').onclick = () => document.getElementById('sidebar').classList.toggle('collapsed');
+document.getElementById('themeToggle').onclick = () => {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  document.querySelector('#themeToggle i').className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+};
+
+initSidebar();
+initChips();
+</script>
+</body>
+</html>

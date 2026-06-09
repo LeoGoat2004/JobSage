@@ -1,0 +1,13 @@
+doc/
+
+node_modules/
+
+.crawl4ai/
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+.trae/
